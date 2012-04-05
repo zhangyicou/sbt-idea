@@ -13,22 +13,31 @@ import xml.Elem._
 
 
 
-class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: SubProjectInfo, val env: IdeaProjectEnvironment, val userEnv: IdeaUserEnvironment, val log: Logger) extends SaveableXml {
+class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: SubProjectInfo, val env: IdeaProjectEnvironment, val userEnv: IdeaUserEnvironment, val log: Logger, scalaVersion: String, scalaFacet: Boolean = true, includeGeneratedClasses: Boolean = false) extends SaveableXml {
   val path = String.format("%s/%s.iml", imlDir.getAbsolutePath, project.name)
 
   def relativePath(file: File) = {
     IO.relativize(projectRoot, file.getCanonicalFile).map ("$MODULE_DIR$/../" + _).getOrElse(file.getCanonicalPath)
   }
-
+  val s = java.io.File.separator
   val sources = project.compileDirs.sources.map(relativePath(_))
   val resources = project.compileDirs.resources.map(relativePath(_))
   val testSources = project.testDirs.sources.map(relativePath(_))
   val testResources = project.testDirs.resources.map(relativePath(_))
-
-  def content: Node = {
-    <module type="JAVA_MODULE" version="4">
-      <component name="FacetManager">
-        <facet type="scala" name="Scala">
+  lazy val generatedReference = "file://$MODULE_DIR$/../target"+ s + "scala-"+scalaVersion + s + "classes_managed"
+  val genarated = if(includeGeneratedClasses) {
+    <orderEntry type="module-library">
+        <library>
+          <CLASSES>
+            <root url={generatedReference} />
+          </CLASSES>
+          <JAVADOC />
+          <SOURCES />
+        </library>
+      </orderEntry>
+  } else scala.xml.Null
+  val facet = if (scalaFacet) {
+     <facet type="scala" name="Scala">
           <configuration>
             {
               project.basePackage.map(bp => <option name="basePackage" value={bp} />).getOrElse(scala.xml.Null)
@@ -40,6 +49,12 @@ class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: Sub
             }
           </configuration>
         </facet>
+        } else scala.xml.Null
+        
+  def content: Node = {
+    <module type="JAVA_MODULE" version="4">
+      <component name="FacetManager">
+        {facet}
         { if (project.webAppPath.isDefined && userEnv.webFacet == true) webFacet() else scala.xml.Null }
       </component>
       <component name="NewModuleRootManager" inherit-compiler-output={env.projectOutputPath.isDefined.toString}>
@@ -115,6 +130,7 @@ class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: Sub
             <orderEntry type="module" module-name={name} exported=""/>
           }
         }
+        {genarated}
       </component>
     </module>
   }

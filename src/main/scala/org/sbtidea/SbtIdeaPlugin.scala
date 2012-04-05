@@ -11,28 +11,36 @@ import SbtIdeaModuleMapping._
 import java.lang.IllegalArgumentException
 
 object SbtIdeaPlugin extends Plugin {
+  val commandName = SettingKey[String]("idea-command-name")
   val ideaProjectName = SettingKey[String]("idea-project-name")
   val ideaProjectGroup = SettingKey[String]("idea-project-group")
   val ideaIgnoreModule = SettingKey[Boolean]("idea-ignore-module")
   val ideaBasePackage = SettingKey[Option[String]]("idea-base-package", "The base package configured in the Scala Facet, used by IDEA to generated nested package clauses. For example, com.acme.wibble")
   val ideaSourcesClassifiers = SettingKey[Seq[String]]("idea-sources-classifiers")
   val ideaJavadocsClassifiers = SettingKey[Seq[String]]("idea-javadocs-classifiers")
-
-  override lazy val settings = Seq(
-    Keys.commands += ideaCommand,
+  val addGeneratedClasses = SettingKey[Boolean]("idea-add-generated-classes")
+  val includeScalaFacet = SettingKey[Boolean]("idea-include-scala-facet")
+  val defaultClassifierPolicy = SettingKey[Boolean]("idea-classifier-policy")
+ 
+  val ideaSettings = Seq(
+    addGeneratedClasses := false,
+    includeScalaFacet := true,
+    defaultClassifierPolicy := true,
     ideaProjectName := "IdeaProject",
+    commandName := "gen-idea",
+    Keys.commands <+= (commandName)(ideaCommand),
     ideaBasePackage := None,
     ideaSourcesClassifiers := Seq("sources"),
     ideaJavadocsClassifiers := Seq("javadoc")
   )
-
-  private val NoClassifiers = "no-classifiers"
+  private val WithSources = "with-sources"
+  private val NoClassifiers = "no-sources"
   private val SbtClassifiers = "sbt-classifiers"
   private val NoFsc = "no-fsc"
 
-  private val args = (Space ~> NoClassifiers | Space ~> SbtClassifiers | Space ~> NoFsc).*
+  private val args = (Space ~> NoClassifiers | Space ~> SbtClassifiers | Space ~> NoFsc | Space ~> WithSources).*
 
-  private lazy val ideaCommand = Command("gen-idea")(_ => args)(doCommand)
+  def ideaCommand(name: String) = Command(name)(_ => args)(doCommand)
 
   def doCommand(state: State, args: Seq[String]): State = {
     val provider = state.configuration.provider
@@ -68,6 +76,12 @@ object SbtIdeaPlugin extends Plugin {
         case (id, proj) => (ProjectRef(uri, id) -> proj) :: getProjectList(proj).toList
       }
     }
+   
+    val extractIncludeScalaFacet: Boolean = 
+      (includeScalaFacet in extracted.currentRef get buildStruct.data).getOrElse(true)
+    
+    val extractAddGeneratedClasses: Boolean = 
+      (addGeneratedClasses in extracted.currentRef get buildStruct.data).getOrElse(false)
 
     def ignoreModule(projectRef: ProjectRef): Boolean = {
       (ideaIgnoreModule in projectRef get buildStruct.data).getOrElse(false)
@@ -97,7 +111,7 @@ object SbtIdeaPlugin extends Plugin {
     val imlDir = new File(projectInfo.baseDir, env.modulePath.get)
     imlDir.mkdirs()
     for (subProj <- subProjects) {
-      val module = new IdeaModuleDescriptor(imlDir, projectInfo.baseDir, subProj, env, userEnv, logger(state))
+      val module = new IdeaModuleDescriptor(imlDir, projectInfo.baseDir, subProj, env, userEnv, logger(state), sbtScalaVersion, scalaFacet = extractIncludeScalaFacet, includeGeneratedClasses = extractAddGeneratedClasses)
       module.save()
     }
 
@@ -130,6 +144,8 @@ object SbtIdeaPlugin extends Plugin {
 
   def projectData(projectRef: ProjectRef, project: ResolvedProject, buildStruct: BuildStructure,
                   state: State, args: Seq[String]): SubProjectInfo = {
+
+     lazy val defaultPolicy: Boolean = (defaultClassifierPolicy in projectRef get buildStruct.data).getOrElse(true)
 
     def optionalSetting[A](key: ScopedSetting[A]) : Option[A] = key in projectRef get buildStruct.data
 
@@ -204,9 +220,10 @@ object SbtIdeaPlugin extends Plugin {
     }
     val compileDirectories: Directories = directoriesFor(Configurations.Compile)
     val testDirectories: Directories = directoriesFor(Configurations.Test).addSrc(sourceDirectoriesFor(Configurations.IntegrationTest)).addRes(resourceDirectoriesFor(Configurations.IntegrationTest))
+    val excludeClassifier = if (defaultPolicy) args.contains(NoClassifiers) else !args.contains(WithSources)
     val librariesExtractor = new SbtIdeaModuleMapping.LibrariesExtractor(buildStruct, state, projectRef,
       logger(state), scalaInstance,
-      withClassifiers = if (args.contains(NoClassifiers)) None else {
+      withClassifiers = if (excludeClassifier) None else {
         Some((setting(ideaSourcesClassifiers, "Missing idea-sources-classifiers"), setting(ideaJavadocsClassifiers, "Missing idea-javadocs-classifiers")))
       }
     )
