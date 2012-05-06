@@ -56,6 +56,7 @@ class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: Sub
       <component name="FacetManager">
         {facet}
         { if (project.webAppPath.isDefined && userEnv.webFacet == true) webFacet() else scala.xml.Null }
+        { project.extraFacets }
       </component>
       <component name="NewModuleRootManager" inherit-compiler-output={env.projectOutputPath.isDefined.toString}>
         {
@@ -131,6 +132,25 @@ class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: Sub
           }
         }
         {genarated}
+        {
+          project.classpathDeps.map { case (classesDir, sourceDirs) =>
+            <orderEntry type="module-library">
+              <library>
+                <CLASSES>
+                  <root url={ "file://%s".format(classesDir.getAbsolutePath) } />
+                </CLASSES>
+                <JAVADOC />
+                <SOURCES>
+                {
+                  sourceDirs.filter(_.exists).map { srcDir =>
+                    <root url={ "file://%s".format(srcDir.getAbsolutePath) } />
+                  }
+                }
+                </SOURCES>
+              </library>
+            </orderEntry>
+          }
+        }
       </component>
     </module>
   }

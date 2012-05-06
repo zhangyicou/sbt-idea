@@ -54,16 +54,18 @@ class IdeaProjectDescriptor(val projectInfo: IdeaProjectInfo, val env: IdeaProje
       <modules>
       {
         if (env.includeSbtProjectDefinitionModule) {
-          for {moduleInfo <- projectInfo.childProjects
-               pathPrefix = if (env.modulePath.isDefined) "/" + env.modulePath.get else moduleInfo.baseDir.getCanonicalPath} yield {
-            moduleEntry("/" + env.modulePath.get, moduleInfo.name + "-build", None)
+          for {
+            moduleInfo <- projectInfo.childProjects if new File(moduleInfo.baseDir, "project").exists
+          } yield {
+            moduleEntry("/" + env.modulePath, moduleInfo.name + "-build", None)
           }
         }
       }
       {
-        for {moduleInfo <- projectInfo.childProjects
-             pathPrefix = if (env.modulePath.isDefined) "/" + env.modulePath.get else moduleInfo.baseDir.getCanonicalPath} yield {
-          moduleEntry(pathPrefix, moduleInfo.name, moduleInfo.ideaGroup)
+        for {
+          moduleInfo <- projectInfo.childProjects
+        } yield {
+          moduleEntry("/" + env.modulePath, moduleInfo.name, moduleInfo.ideaGroup)
         }
       }
       </modules>

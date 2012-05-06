@@ -1,6 +1,8 @@
 package org.sbtidea
 
 import java.io.File
+import xml.NodeSeq
+
 // cheating for now
 import sbt.ScalaInstance
 
@@ -14,7 +16,10 @@ object IdeaLibrary {
   case object ProvidedScope extends Scope("PROVIDED")
 }
 
-case class IdeaLibrary(name: String, classes: Seq[File], javaDocs: Seq[File], sources: Seq[File])
+case class IdeaLibrary(name: String, classes: Set[File], javaDocs: Set[File], sources: Set[File]) {
+  def hasClasses = !classes.isEmpty
+  def allFiles = classes ++ sources ++ javaDocs
+}
 
 case class IdeaModuleLibRef(config: IdeaLibrary.Scope, library: IdeaLibrary)
 
@@ -23,9 +28,10 @@ case class Directories(sources: Seq[File], resources: Seq[File], outDir: File) {
   def addRes (moreResources: Seq[File]): Directories = Directories(sources, resources ++ moreResources, outDir)
 }
 
-case class SubProjectInfo(baseDir: File, name: String, dependencyProjects: List[String], compileDirs: Directories,
+case class SubProjectInfo(baseDir: File, name: String, dependencyProjects: List[String], classpathDeps: Seq[(File, Seq[File])], compileDirs: Directories,
                           testDirs: Directories, libraries: Seq[IdeaModuleLibRef], scalaInstance: ScalaInstance,
-                          ideaGroup: Option[String], webAppPath: Option[File], basePackage: Option[String])
+                          ideaGroup: Option[String], webAppPath: Option[File], basePackage: Option[String],
+                          extraFacets: NodeSeq)
 
 case class IdeaProjectInfo(baseDir: File, name: String, childProjects: List[SubProjectInfo], ideaLibs: List[IdeaLibrary])
 
@@ -33,5 +39,5 @@ case class IdeaUserEnvironment(webFacet: Boolean)
 
 case class IdeaProjectEnvironment(projectJdkName :String, javaLanguageLevel: String,
                                   includeSbtProjectDefinitionModule: Boolean, projectOutputPath: Option[String],
-                                  excludedFolders: String, compileWithIdea: Boolean, modulePath: Option[String], useProjectFsc: Boolean) {
+                                  excludedFolders: String, compileWithIdea: Boolean, modulePath: String, useProjectFsc: Boolean) {
 }

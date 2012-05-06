@@ -9,6 +9,7 @@ import java.io.File
 import collection.Seq
 import SbtIdeaModuleMapping._
 import java.lang.IllegalArgumentException
+import xml.NodeSeq
 
 object SbtIdeaPlugin extends Plugin {
   val commandName = SettingKey[String]("idea-command-name")
@@ -21,6 +22,7 @@ object SbtIdeaPlugin extends Plugin {
   val addGeneratedClasses = SettingKey[Boolean]("idea-add-generated-classes")
   val includeScalaFacet = SettingKey[Boolean]("idea-include-scala-facet")
   val defaultClassifierPolicy = SettingKey[Boolean]("idea-classifier-policy")
+  val ideaExtraFacets = SettingKey[NodeSeq]("idea-extra-facets")
  
   val ideaSettings = Seq(
     addGeneratedClasses := false,
@@ -30,9 +32,11 @@ object SbtIdeaPlugin extends Plugin {
     commandName := "gen-idea",
     Keys.commands <+= (commandName)(ideaCommand),
     ideaBasePackage := None,
+    ideaExtraFacets := NodeSeq.Empty,
     ideaSourcesClassifiers := Seq("sources"),
     ideaJavadocsClassifiers := Seq("javadoc")
   )
+  
   private val WithSources = "with-sources"
   private val NoClassifiers = "no-sources"
   private val SbtClassifiers = "sbt-classifiers"
@@ -101,7 +105,7 @@ object SbtIdeaPlugin extends Plugin {
     val languageLevel = "JDK_" + jdkName.replace(".", "_")
     val env = IdeaProjectEnvironment(projectJdkName = jdkName, javaLanguageLevel = languageLevel,
       includeSbtProjectDefinitionModule = true, projectOutputPath = None, excludedFolders = "target",
-      compileWithIdea = false, modulePath = Some(".idea_modules"), useProjectFsc = !args.contains(NoFsc))
+      compileWithIdea = false, modulePath = ".idea_modules", useProjectFsc = !args.contains(NoFsc))
 
     val userEnv = IdeaUserEnvironment(false)
 
@@ -110,7 +114,7 @@ object SbtIdeaPlugin extends Plugin {
     val rootFiles = new IdeaProjectDescriptor(projectInfo, env, logger(state))
     rootFiles.save()
 
-    val imlDir = new File(projectInfo.baseDir, env.modulePath.get)
+    val imlDir = new File(projectInfo.baseDir, env.modulePath)
     imlDir.mkdirs()
     for (subProj <- subProjects) {
       val module = new IdeaModuleDescriptor(imlDir, projectInfo.baseDir, subProj, env, userEnv, logger(state), sbtScalaVersion, scalaFacet = extractIncludeScalaFacet, includeGeneratedClasses = extractAddGeneratedClasses)
@@ -136,9 +140,12 @@ object SbtIdeaPlugin extends Plugin {
 
     // Create build projects
     for (subProj <- subProjects) {
-      val sbtDef = new SbtProjectDefinitionIdeaModuleDescriptor(subProj.name, imlDir, subProj.baseDir,
-        new File(subProj.baseDir, "project"), sbtScalaVersion, sbtVersion, sbtOut, buildUnit.classpath, sbtModuleSourceFiles, logger(state))
-      sbtDef.save()
+      val buildDefinitionDir = new File(subProj.baseDir, "project")
+      if (buildDefinitionDir.exists()) {
+        val sbtDef = new SbtProjectDefinitionIdeaModuleDescriptor(subProj.name, imlDir, subProj.baseDir,
+         buildDefinitionDir, sbtScalaVersion, sbtVersion, sbtOut, buildUnit.classpath, sbtModuleSourceFiles, logger(state))
+        sbtDef.save()
+      }
     }
 
     state
@@ -147,17 +154,17 @@ object SbtIdeaPlugin extends Plugin {
   def projectData(projectRef: ProjectRef, project: ResolvedProject, buildStruct: BuildStructure,
                   state: State, args: Seq[String]): SubProjectInfo = {
 
-     lazy val defaultPolicy: Boolean = (defaultClassifierPolicy in projectRef get buildStruct.data).getOrElse(true)
+    lazy val defaultPolicy: Boolean = (defaultClassifierPolicy in projectRef get buildStruct.data).getOrElse(true)
 
-    def optionalSetting[A](key: ScopedSetting[A]) : Option[A] = key in projectRef get buildStruct.data
+    def optionalSetting[A](key: ScopedSetting[A], pr: ProjectRef = projectRef) : Option[A] = key in pr get buildStruct.data
 
     def logErrorAndFail(errorMessage: String): Nothing = {
       logger(state).error(errorMessage);
       throw new IllegalArgumentException()
     }
 
-    def setting[A](key: ScopedSetting[A], errorMessage: => String) : A = {
-      optionalSetting(key) getOrElse {
+    def setting[A](key: ScopedSetting[A], errorMessage: => String, pr: ProjectRef = projectRef) : A = {
+      optionalSetting(key, pr) getOrElse {
         logErrorAndFail(errorMessage)
       }
     }
@@ -230,8 +237,12 @@ object SbtIdeaPlugin extends Plugin {
       }
     )
     val basePackage = setting(ideaBasePackage, "missing IDEA base package")
-    SubProjectInfo(baseDirectory, projectName, project.uses.map(_.project).toList, compileDirectories,
-      testDirectories, librariesExtractor.allLibraries, scalaInstance, ideaGroup, None, basePackage)
+    val extraFacets = settingWithDefault(ideaExtraFacets, NodeSeq.Empty)
+    val classpathDeps = project.dependencies.map { dep =>
+      (setting(Keys.classDirectory in Compile, "Missing class directory", dep.project), setting(Keys.sourceDirectories in Compile, "Missing source directory", dep.project))
+    }
+    SubProjectInfo(baseDirectory, projectName, project.uses.map(_.project).toList, classpathDeps, compileDirectories,
+      testDirectories, librariesExtractor.allLibraries, scalaInstance, ideaGroup, None, basePackage, extraFacets)
   }
 
 }
