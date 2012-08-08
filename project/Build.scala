@@ -5,12 +5,13 @@ object SbtIdeaBuild extends Build {
 
   lazy val sbtIdea = Project("sbt-idea", file("."), settings = mainSettings)
 
-  lazy val mainSettings: Seq[Project.Setting[_]] = Defaults.defaultSettings ++ Seq(
+
+  lazy val mainSettings: Seq[Project.Setting[_]] = Defaults.defaultSettings ++ ScriptedPlugin.scriptedSettings ++ Seq(
     sbtPlugin := true,
     organization := "com.github.mpeltonen",
     definedSbtPlugins := Set("org.sbtidea.SbtIdeaPlugin"),
     name := "sbt-idea",
-    version := "1.1.0-M2-TYPESAFE",
+    version := "1.1.0-TYPESAFE",
     publishMavenStyle := false,
     publishTo <<= (version) { version: String =>
       val typesafeIvyReleases = Resolver.url("Typesafe Ivy Releases Repository", url("http://repo.typesafe.com/typesafe/ivy-releases/"))(Resolver.ivyStylePatterns) 
@@ -19,6 +20,9 @@ object SbtIdeaBuild extends Build {
                           else typesafeIvyReleases
       Some(repo)
     },
+    publishArtifact in Test := false,
+    pomIncludeRepository := (_ => false),
+    pomExtra := extraPom,
     resolvers += Classpaths.typesafeSnapshots,
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
     libraryDependencies ++= scriptedTestHelperDependencies
@@ -27,4 +31,25 @@ object SbtIdeaBuild extends Build {
   private def scriptedTestHelperDependencies = Seq(
     "commons-io" % "commons-io" % "2.0.1"
   )
+
+  def extraPom = (
+    <url>http://your.project.url</url>
+    <licenses>
+      <license>
+        <name>BSD-style</name>
+        <url>http://www.opensource.org/licenses/BSD-3-Clause</url>
+        <distribution>repo</distribution>
+      </license>
+    </licenses>
+    <scm>
+      <url>git@github.com:mpeltonen/sbt-idea.git</url>
+      <connection>scm:git:git@github.com:mpeltonen/sbt-idea.git</connection>
+    </scm>
+    <developers>
+      <developer>
+      <id>mpeltonen</id>
+      <name>Mikko Peltonen</name>
+      <url>http://github.com/mpeltonen</url>
+    </developer>
+  </developers>)
 }

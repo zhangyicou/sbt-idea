@@ -8,9 +8,8 @@ package org.sbtidea
 
 import sbt._
 import java.io.File
-import xml.{UnprefixedAttribute, NodeSeq, Node, NodeBuffer}
-import xml.Elem._
 
+import xml.{UnprefixedAttribute, Node, Text}
 
 
 class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: SubProjectInfo, val env: IdeaProjectEnvironment, val userEnv: IdeaUserEnvironment, val log: Logger, scalaVersion: String, scalaFacet: Boolean = true, includeGeneratedClasses: Boolean = false) extends SaveableXml {
@@ -47,6 +46,12 @@ class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: Sub
             {
               if (env.useProjectFsc) <option name="fsc" value="true" />
             }
+            {
+              if (env.scalacOptions.contains("-deprecation")) <option name="deprecationWarnings" value="true" />
+            }
+            {
+              if (env.scalacOptions.contains("-unchecked")) <option name="uncheckedWarnings" value="true" />
+            }
           </configuration>
         </facet>
         } else scala.xml.Null
@@ -67,10 +72,10 @@ class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: Sub
         }
         <exclude-output />
         <content url={"file://" + relativePath(project.baseDir) }>
-          { sources.map(sourceFolder(_, false)) }
-          { resources.map(sourceFolder(_, false)) }
-          { testSources.map(sourceFolder(_, true)) }
-          { testResources.map(sourceFolder(_, true)) }
+          { sources.map(sourceFolder(_, false, project.packagePrefix)) }
+          { resources.map(sourceFolder(_, false, project.packagePrefix)) }
+          { testSources.map(sourceFolder(_, true, project.packagePrefix)) }
+          { testResources.map(sourceFolder(_, true, project.packagePrefix)) }
           {
 
             def dontExcludeManagedSources(toExclude:File):Seq[File] = {
@@ -155,7 +160,13 @@ class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: Sub
     </module>
   }
 
-  def sourceFolder(path: String, isTestSourceFolder: Boolean) = <sourceFolder url={"file://" + path} isTestSource={isTestSourceFolder.toString} />
+  def sourceFolder(path: String, isTestSourceFolder: Boolean,
+                   packagePrefix: Option[String]) = {
+    val pkg = packagePrefix.map(Text(_))
+    <sourceFolder url={"file://" + path}
+                  isTestSource={isTestSourceFolder.toString}
+                  packagePrefix={pkg} />
+  }
 
   def webFacet(): Node = {
     <facet type="web" name="Web">
