@@ -38,11 +38,12 @@ object SbtIdeaPlugin extends Plugin {
   )
   
   private val WithSources = "with-sources"
+  private val WithSourcesYes = "with-sources=yes"
   private val NoClassifiers = "no-sources"
   private val SbtClassifiers = "sbt-classifiers"
   private val NoFsc = "no-fsc"
 
-  private val args = (Space ~> NoClassifiers | Space ~> SbtClassifiers | Space ~> NoFsc | Space ~> WithSources).*
+  private val args = (Space ~> NoClassifiers | Space ~> SbtClassifiers | Space ~> NoFsc | Space ~> WithSources | Space ~> WithSourcesYes).*
 
   def ideaCommand(name: String) = Command(name)(_ => args)(doCommand)
 
@@ -229,7 +230,7 @@ object SbtIdeaPlugin extends Plugin {
     }
     val compileDirectories: Directories = directoriesFor(Configurations.Compile)
     val testDirectories: Directories = directoriesFor(Configurations.Test).addSrc(sourceDirectoriesFor(Configurations.IntegrationTest)).addRes(resourceDirectoriesFor(Configurations.IntegrationTest))
-    val excludeClassifier = if (defaultPolicy) args.contains(NoClassifiers) else !args.contains(WithSources)
+    val excludeClassifier = if (defaultPolicy) args.contains(NoClassifiers) else !(args.contains(WithSources) || args.contains(WithSourcesYes))
     val librariesExtractor = new SbtIdeaModuleMapping.LibrariesExtractor(buildStruct, state, projectRef,
       logger(state), scalaInstance,
       withClassifiers = if (excludeClassifier) None else {
