@@ -1,4 +1,4 @@
-package org.sbtidea.test.util
+package com.typesafe.sbtidea.test.util
 
 import sbt._
 import org.apache.commons.io.FileUtils.listFiles
@@ -8,7 +8,7 @@ import xml._
 import collection.JavaConverters._
 import xml.transform.{RewriteRule, RuleTransformer}
 import xml.Node
-import org.sbtidea.SystemProps
+import com.typesafe.sbtidea.SystemProps
 
 abstract class AbstractScriptedTestBuild(projectName : String) extends Build {
   import XmlAttributesCopy._

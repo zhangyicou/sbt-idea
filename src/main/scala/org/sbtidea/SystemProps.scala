@@ -1,4 +1,4 @@
-package org.sbtidea
+package com.typesafe.sbtidea
 
 object SystemProps {
   val jdkName = System.getProperty("java.version").substring(0, 3)

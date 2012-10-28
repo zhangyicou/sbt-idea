@@ -1,4 +1,4 @@
-package org.sbtidea
+package com.typesafe.sbtidea
 
 import sbt._
 
@@ -131,7 +131,7 @@ object SbtIdeaModuleMapping {
   }
 
   private def toScope(conf: String) = {
-    import org.sbtidea.IdeaLibrary._
+    import com.typesafe.sbtidea.IdeaLibrary._
     conf match {
       case "compile" => CompileScope
       case "runtime" => RuntimeScope

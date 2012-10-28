@@ -8,7 +8,7 @@ object SbtIdeaBuild extends Build {
 
   lazy val mainSettings: Seq[Project.Setting[_]] = Defaults.defaultSettings ++ ScriptedPlugin.scriptedSettings ++ Seq(
     sbtPlugin := true,
-    organization := "com.github.mpeltonen",
+    organization := "com.typesafe.sbtidea",
     definedSbtPlugins := Set("org.sbtidea.SbtIdeaPlugin"),
     name := "sbt-idea",
     version := "1.1.0-TYPESAFE",
