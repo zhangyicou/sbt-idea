@@ -47,8 +47,10 @@ object SbtIdeaPlugin extends Plugin {
   private val NoClassifiers = "no-sources"
   private val SbtClassifiers = "sbt-classifiers"
   private val NoFsc = "no-fsc"
+  private val NoTypeHighlighting = "no-type-highlighting"
+  private val NoSbtBuildModule = "no-sbt-build-module"
 
-  private val args = (Space ~> NoClassifiers | Space ~> SbtClassifiers | Space ~> NoFsc | Space ~> WithSources ).*
+  private val args = (Space ~> NoClassifiers | Space ~> SbtClassifiers | Space ~> NoFsc | Space ~> WithSources | Space ~> NoTypeHighlighting | Space ~> NoSbtBuildModule).*
 
   def ideaCommand(name: String) = Command(name)(_ => args)(doCommand)
 
@@ -108,11 +110,10 @@ object SbtIdeaPlugin extends Plugin {
 
     val projectInfo = IdeaProjectInfo(buildUnit.localBase, name.getOrElse("Unknown"), subProjects, ideaLibs ::: scalaLibs)
 
-    val scalacOptions = extracted.runTask(Keys.scalacOptions in Configurations.Compile, state)._2
     val env = IdeaProjectEnvironment(projectJdkName = SystemProps.jdkName, javaLanguageLevel = SystemProps.languageLevel,
-      includeSbtProjectDefinitionModule = true, projectOutputPath = None, excludedFolders = "target",
+      includeSbtProjectDefinitionModule = !args.contains(NoSbtBuildModule), projectOutputPath = None, excludedFolders = "target",
       compileWithIdea = false, modulePath = ".idea_modules", useProjectFsc = !args.contains(NoFsc),
-      scalacOptions = scalacOptions)
+      enableTypeHighlighting = !args.contains(NoTypeHighlighting))
 
     val userEnv = IdeaUserEnvironment(false)
 
@@ -151,7 +152,10 @@ object SbtIdeaPlugin extends Plugin {
       if (buildDefinitionDir.exists()) {
         val sbtDef = new SbtProjectDefinitionIdeaModuleDescriptor(subProj.name, imlDir, subProj.baseDir,
          buildDefinitionDir, sbtScalaVersion, sbtVersion, sbtOut, buildUnit.classpath, sbtModuleSourceFiles, state.log)
-        sbtDef.save()
+        if (args.contains(NoSbtBuildModule))
+          sbtDef.removeIfExists()
+        else
+          sbtDef.save()
       }
     }
 
@@ -180,9 +184,9 @@ object SbtIdeaPlugin extends Plugin {
       optionalSetting(key) getOrElse defaultValue
     }
 
-    // The SBT project name and id can be different, we choose the id as the
-    // IDEA project name. It must be consistent with the value of SubProjectInfo#dependencyProjects.
-    val projectName = project.id
+    // The SBT project name and id can be different. For single-module projects, we choose the name as the
+    // IDEA project name, and for multi-module projects, the id as it must be consistent with the value of SubProjectInfo#dependencyProjects.
+    val projectName = if (allProjectIds.size == 1) setting(Keys.name, "Missing project name") else project.id
 
     state.log.info("Trying to create an Idea module " + projectName)
 
@@ -251,8 +255,14 @@ object SbtIdeaPlugin extends Plugin {
         (setting(Keys.classDirectory in scope, "Missing class directory", dep.project), setting(Keys.sourceDirectories in scope, "Missing source directory", dep.project))
       }
     }
+
+    val scalacOptions: Seq[String] = EvaluateTask(buildStruct, Keys.scalacOptions in Configurations.Compile, state, projectRef) match {
+      case Some((_, Value(options))) => options
+      case _ => Seq()
+    }
+
     SubProjectInfo(baseDirectory, projectName, project.uses.map(_.project).filter(isAggregate).toList, classpathDeps, compileDirectories,
-      testDirectories, librariesExtractor.allLibraries, scalaInstance, ideaGroup, None, basePackage, packagePrefix, extraFacets)
+      testDirectories, librariesExtractor.allLibraries, scalaInstance, ideaGroup, None, basePackage, packagePrefix, extraFacets, scalacOptions)
   }
 
 }

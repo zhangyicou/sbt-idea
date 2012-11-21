@@ -47,11 +47,12 @@ class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: Sub
               if (env.useProjectFsc) <option name="fsc" value="true" />
             }
             {
-              if (env.scalacOptions.contains("-deprecation")) <option name="deprecationWarnings" value="true" />
+              if (project.scalacOptions.contains("-deprecation")) <option name="deprecationWarnings" value="true" />
             }
             {
-              if (env.scalacOptions.contains("-unchecked")) <option name="uncheckedWarnings" value="true" />
+              if (project.scalacOptions.contains("-unchecked")) <option name="uncheckedWarnings" value="true" />
             }
+            <option name="compilerOptions" value={ project.scalacOptions.mkString(" ") } />
           </configuration>
         </facet>
         } else scala.xml.Null
