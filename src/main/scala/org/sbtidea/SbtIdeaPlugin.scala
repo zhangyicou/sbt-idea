@@ -20,14 +20,12 @@ object SbtIdeaPlugin extends Plugin {
                                                      "The package prefix for source directories.")
   val ideaSourcesClassifiers = SettingKey[Seq[String]]("idea-sources-classifiers")
   val ideaJavadocsClassifiers = SettingKey[Seq[String]]("idea-javadocs-classifiers")
-  val addGeneratedClasses = SettingKey[Boolean]("idea-add-generated-classes")
   val includeScalaFacet = SettingKey[Boolean]("idea-include-scala-facet")
   val defaultClassifierPolicy = SettingKey[Boolean]("idea-classifier-policy")
   val ideaExtraFacets = SettingKey[NodeSeq]("idea-extra-facets")
  
   val ideaSettings = Seq(
     //play specific keys
-    addGeneratedClasses := false,
     includeScalaFacet := true,
     defaultClassifierPolicy := true,
     ideaProjectName := "IdeaProject",
@@ -91,9 +89,6 @@ object SbtIdeaPlugin extends Plugin {
    
     val extractIncludeScalaFacet: Boolean = 
       (includeScalaFacet in extracted.currentRef get buildStruct.data).getOrElse(true)
-    
-    val extractAddGeneratedClasses: Boolean = 
-      (addGeneratedClasses in extracted.currentRef get buildStruct.data).getOrElse(false)
 
     def ignoreModule(projectRef: ProjectRef): Boolean = {
       (ideaIgnoreModule in projectRef get buildStruct.data).getOrElse(false)
@@ -125,7 +120,7 @@ object SbtIdeaPlugin extends Plugin {
     val imlDir = new File(projectInfo.baseDir, env.modulePath)
     imlDir.mkdirs()
     for (subProj <- subProjects) {
-      val module = new IdeaModuleDescriptor(imlDir, projectInfo.baseDir, subProj, env, userEnv, state.log, sbtScalaVersion, scalaFacet = extractIncludeScalaFacet, includeGeneratedClasses = extractAddGeneratedClasses)
+      val module = new IdeaModuleDescriptor(imlDir, projectInfo.baseDir, subProj, env, userEnv, state.log, sbtScalaVersion, scalaFacet = extractIncludeScalaFacet)
       module.save()
     }
 

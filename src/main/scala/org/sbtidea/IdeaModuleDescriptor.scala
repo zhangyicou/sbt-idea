@@ -12,7 +12,7 @@ import java.io.File
 import xml.{UnprefixedAttribute, Node, Text}
 
 
-class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: SubProjectInfo, val env: IdeaProjectEnvironment, val userEnv: IdeaUserEnvironment, val log: Logger, scalaVersion: String, scalaFacet: Boolean = true, includeGeneratedClasses: Boolean = false) extends SaveableXml {
+class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: SubProjectInfo, val env: IdeaProjectEnvironment, val userEnv: IdeaUserEnvironment, val log: Logger, scalaVersion: String, scalaFacet: Boolean = true) extends SaveableXml {
   val path = String.format("%s/%s.iml", imlDir.getAbsolutePath, project.name)
 
   def relativePath(file: File) = {
@@ -23,18 +23,6 @@ class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: Sub
   val resources = project.compileDirs.resources.map(relativePath(_))
   val testSources = project.testDirs.sources.map(relativePath(_))
   val testResources = project.testDirs.resources.map(relativePath(_))
-  lazy val generatedReference = "file://$MODULE_DIR$/../target"+ s + "scala-"+scalaVersion + s + "classes_managed"
-  val genarated = if(includeGeneratedClasses) {
-    <orderEntry type="module-library">
-        <library>
-          <CLASSES>
-            <root url={generatedReference} />
-          </CLASSES>
-          <JAVADOC />
-          <SOURCES />
-        </library>
-      </orderEntry>
-  } else scala.xml.Null
   val facet = if (scalaFacet) {
      <facet type="scala" name="Scala">
           <configuration>
@@ -137,7 +125,6 @@ class IdeaModuleDescriptor(val imlDir: File, projectRoot: File, val project: Sub
             <orderEntry type="module" module-name={name} exported=""/>
           }
         }
-        {genarated}
         {
           project.classpathDeps.map { case (classesDir, sourceDirs) =>
             <orderEntry type="module-library">
