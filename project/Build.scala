@@ -9,9 +9,8 @@ object SbtIdeaBuild extends Build {
   lazy val mainSettings: Seq[Project.Setting[_]] = Defaults.defaultSettings ++ ScriptedPlugin.scriptedSettings ++ Seq(
     sbtPlugin := true,
     organization := "com.typesafe.sbtidea",
-    definedSbtPlugins := Set("org.sbtidea.SbtIdeaPlugin"),
     name := "sbt-idea",
-    version := "1.1.0-TYPESAFE",
+    version := "1.1.1-SNAPSHOT",
     publishMavenStyle := false,
     publishTo <<= (version) { version: String =>
       val typesafeIvyReleases = Resolver.url("Typesafe Ivy Releases Repository", url("http://repo.typesafe.com/typesafe/ivy-releases/"))(Resolver.ivyStylePatterns) 
