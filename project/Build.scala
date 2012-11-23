@@ -10,7 +10,7 @@ object SbtIdeaBuild extends Build {
     sbtPlugin := true,
     organization := "com.typesafe.sbtidea",
     name := "sbt-idea",
-    version := "1.1.1-SNAPSHOT",
+    version := "1.1.1",
     publishMavenStyle := false,
     publishTo <<= (version) { version: String =>
       val typesafeIvyReleases = Resolver.url("Typesafe Ivy Releases Repository", url("http://repo.typesafe.com/typesafe/ivy-releases/"))(Resolver.ivyStylePatterns) 
