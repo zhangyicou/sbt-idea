@@ -13,8 +13,8 @@ object SbtIdeaBuild extends Build {
     version := "1.1.1",
     publishMavenStyle := false,
     publishTo <<= (version) { version: String =>
-      val typesafeIvyReleases = Resolver.url("Typesafe Ivy Releases Repository", url("http://repo.typesafe.com/typesafe/ivy-releases/"))(Resolver.ivyStylePatterns) 
-      val typesafeIvySnapshot = Resolver.url("Typesafe Ivy Snapshots Repository", url("http://repo.typesafe.com/typesafe/ivy-snapshots/"))(Resolver.ivyStylePatterns) 
+      val typesafeIvyReleases = Resolver.url("Typesafe Ivy Releases Repository", url("https://typesafe.artifactoryonline.com/typesafe/ivy-releases/"))(Resolver.ivyStylePatterns) 
+      val typesafeIvySnapshot = Resolver.url("Typesafe Ivy Snapshots Repository", url("https://typesafe.artifactoryonline.com/typesafe/ivy-snapshots/"))(Resolver.ivyStylePatterns) 
       val repo =  if (version.trim.endsWith("SNAPSHOT")) typesafeIvySnapshot
                           else typesafeIvyReleases
       Some(repo)
